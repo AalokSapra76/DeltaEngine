@@ -129,33 +129,8 @@ print("              BK DELTA ENGINE v1.0")
 print("=" * 55)
 print()
 
-symbol = input(
-    "Underlying (NIFTY/BANKNIFTY/FINNIFTY) : "
-).strip().upper()
-
-expiry = input(
-    "Expiry (YYYY-MM-DD) : "
-).strip()
-
-strike = float(
-    input("Strike : ").strip()
-)
-
-option_type = input(
-    "Option Type (CE/PE) : "
-).strip().upper()
-
-trigger_text = input(
-    f"Delta Trigger [{DEFAULT_TRIGGER}] : "
-).strip()
-
-if trigger_text:
-    delta_trigger = float(trigger_text)
-else:
-    delta_trigger = DEFAULT_TRIGGER
-
 print()
-print("Searching contract...")
+print("Searching contracts...")
 print()
 
 
@@ -180,11 +155,8 @@ client = KiteClient(
     access_token
 )
 
-client.find_option_token(
-    symbol,
-    expiry,
-    strike,
-    option_type
+client.find_option_tokens(
+    MONITORED_CONTRACTS
 )
 
 webhook = Webhook(
@@ -193,24 +165,24 @@ webhook = Webhook(
 
 
 # ==================================================
-# LIVE VALUES
+# CONTRACT STATE
 # ==================================================
 
-spot = 0.0
-premium = 0.0
-delta = 0.0
-
-triggered = False
-
-status = "Monitoring"
-webhook_status = "Waiting"
-
 IV = 12.2
-# ============================
-# main.py
-# PART 2 / 3
-# DO NOT RUN YET
-# ============================
+
+contract_states = []
+
+for contract in MONITORED_CONTRACTS:
+
+    contract_states.append({
+        **contract,
+        "spot": 0.0,
+        "premium": 0.0,
+        "delta": 0.0,
+        "triggered": False,
+        "status": "Monitoring",
+    })
+
 
 # ==================================================
 # DASHBOARD
@@ -224,65 +196,33 @@ def build_dashboard():
         expand=True
     )
 
-    table.add_column(
-        "Field",
-        style="cyan",
-        width=20
-    )
+    table.add_column("Instrument", style="cyan")
+    table.add_column("Expiry")
+    table.add_column("Strike", justify="right")
+    table.add_column("Type", justify="center")
+    table.add_column("Spot", justify="right")
+    table.add_column("Premium", justify="right")
+    table.add_column("Delta", justify="right")
+    table.add_column("Threshold", justify="right")
+    table.add_column("Condition", justify="center")
+    table.add_column("Status")
+    table.add_column("Triggered", justify="center")
 
-    table.add_column(
-        "Value",
-        style="bold white"
-    )
+    for contract in contract_states:
 
-    table.add_row(
-        "Underlying",
-        symbol
-    )
-
-    table.add_row(
-        "Contract",
-        f"{int(strike)} {option_type}"
-    )
-
-    table.add_row(
-        "Expiry",
-        expiry
-    )
-
-    table.add_section()
-
-    table.add_row(
-        "Spot",
-        f"{spot:.2f}"
-    )
-
-    table.add_row(
-        "Premium",
-        f"{premium:.2f}"
-    )
-
-    table.add_row(
-        "Delta",
-        f"{delta:.4f}"
-    )
-
-    table.add_section()
-
-    table.add_row(
-        "Trigger",
-        f"{delta_trigger:.4f}"
-    )
-
-    table.add_row(
-        "Status",
-        status
-    )
-
-    table.add_row(
-        "Webhook",
-        webhook_status
-    )
+        table.add_row(
+            contract["instrument"],
+            contract["expiry"],
+            f"{int(contract['strike'])}",
+            contract["option_type"],
+            f"{contract['spot']:.2f}",
+            f"{contract['premium']:.2f}",
+            f"{contract['delta']:.4f}",
+            f"{contract['delta_threshold']:.4f}",
+            contract["trigger_direction"],
+            contract["status"],
+            "Yes" if contract["triggered"] else "No",
+        )
 
     return table
 
@@ -291,22 +231,16 @@ def build_dashboard():
 # TICK CALLBACK
 # ==================================================
 
-def tick_handler(option_tick, spot_tick):
+def tick_handler(contract_index, option_tick, spot_tick):
 
-    global spot
-    global premium
-    global delta
+    contract = contract_states[contract_index]
 
-    global triggered
-    global status
-    global webhook_status
+    contract["premium"] = option_tick["last_price"]
 
-    premium = option_tick["last_price"]
-
-    spot = spot_tick["last_price"]
+    contract["spot"] = spot_tick["last_price"]
 
     expiry_date = datetime.strptime(
-        expiry,
+        contract["expiry"],
         "%Y-%m-%d"
     )
 
@@ -315,43 +249,44 @@ def tick_handler(option_tick, spot_tick):
         1
     )
 
-    delta = Greeks.delta(
-        spot,
-        strike,
+    contract["delta"] = Greeks.delta(
+        contract["spot"],
+        contract["strike"],
         IV,
         days,
-        option_type,
+        contract["option_type"],
         RISK_FREE_RATE
     )
 
-    if (not triggered) and (delta >= delta_trigger):
+    if (
+        not contract["triggered"]
+        and threshold_reached(
+            contract["delta"],
+            contract["delta_threshold"],
+            contract["trigger_direction"]
+        )
+    ):
 
-        triggered = True
+        contract["triggered"] = True
 
-        status = "TRIGGERED"
+        contract["status"] = "TRIGGERED"
 
         try:
 
             webhook.send(
-                symbol,
-                expiry,
-                strike,
-                option_type,
-                delta,
-                premium,
-                spot
+                contract["instrument"],
+                contract["expiry"],
+                contract["strike"],
+                contract["option_type"],
+                contract["delta"],
+                contract["premium"],
+                contract["spot"]
             )
-
-            webhook_status = "SENT"
 
         except Exception as e:
 
-            webhook_status = f"FAILED : {e}"
-            # ============================
-# main.py
-# PART 3 / 3
-# END OF FILE
-# ============================
+            contract["status"] = f"WEBHOOK FAILED: {e}"
+
 
 # ==================================================
 # START ENGINE
@@ -368,9 +303,14 @@ with Live(
     auto_refresh=True,
 ) as live:
 
-    def live_tick_handler(option_tick, spot_tick):
+    def live_tick_handler(
+        contract_index,
+        option_tick,
+        spot_tick
+    ):
 
         tick_handler(
+            contract_index,
             option_tick,
             spot_tick
         )
@@ -380,7 +320,7 @@ with Live(
             refresh=True
         )
 
-    client.connect(
+    client.connect_multiple(
         live_tick_handler
     )
 
