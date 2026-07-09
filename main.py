@@ -106,6 +106,19 @@ MONITORED_CONTRACTS = [
 ]
 
 
+def threshold_reached(delta, threshold, direction):
+
+    if direction == ">":
+        return delta > threshold
+
+    if direction == "<":
+        return delta < threshold
+
+    raise ValueError(
+        f"Unsupported trigger direction: {direction}"
+    )
+
+
 # ==================================================
 # STARTUP
 # ==================================================
