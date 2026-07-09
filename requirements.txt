@@ -1,0 +1,8 @@
+kiteconnect==5.0.1
+numpy>=1.26.0
+scipy>=1.11.0
+requests>=2.31.0
+python-dotenv>=1.0.1
+py_vollib>=1.0.1
+py_vollib_vectorized>=0.1.1
+pandas>=2.2.2

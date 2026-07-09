@@ -1,0 +1,26 @@
+{
+    "kite": {
+        "api_key": "u90ww967lggf60zy",
+        "api_secret": "fcchi2xefypypz6lua5mnjx1jl22ehz5"
+    },
+
+    "market": {
+        "risk_free_rate": 0.06
+    },
+
+    "delta_rule": {
+        "default_trigger": 0.40,
+        "cooldown_seconds": 10
+    },
+
+    "webhook": {
+        "enabled": true,
+	"url": "https://webhookreceiver-ps6nryst2a-ey.a.run.app?key=7y7gxqhibuaqalhtgei06ns1f5ybzpdk"
+    },
+
+    "logging": {
+        "console": true,
+        "file": true,
+        "filename": "delta_engine.log"
+    }
+}
