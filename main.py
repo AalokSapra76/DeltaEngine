@@ -9,6 +9,7 @@ from datetime import datetime
 
 from rich.live import Live
 from rich.table import Table
+from rich.console import Console
 from rich import box
 
 from auth import AuthManager
@@ -35,75 +36,131 @@ DEFAULT_TRIGGER = config["delta_rule"]["default_trigger"]
 
 
 # ==================================================
-# MONITORED CONTRACTS
+# CONTRACT WIZARD
 # ==================================================
 
-MONITORED_CONTRACTS = [
-    {
-        "instrument": "NIFTY",
-        "expiry": "2026-07-14",
-        "strike": 24800,
-        "option_type": "CE",
-        "delta_threshold": 0.30,
-        "trigger_direction": ">",
-    },
-    {
-        "instrument": "NIFTY",
-        "expiry": "2026-07-14",
-        "strike": 24900,
-        "option_type": "CE",
-        "delta_threshold": 0.25,
-        "trigger_direction": ">",
-    },
-    {
-        "instrument": "NIFTY",
-        "expiry": "2026-07-14",
-        "strike": 24500,
-        "option_type": "PE",
-        "delta_threshold": -0.30,
-        "trigger_direction": "<",
-    },
-    {
-        "instrument": "NIFTY",
-        "expiry": "2026-07-14",
-        "strike": 24400,
-        "option_type": "PE",
-        "delta_threshold": -0.25,
-        "trigger_direction": "<",
-    },
-    {
-        "instrument": "NIFTY",
-        "expiry": "2026-07-28",
-        "strike": 25000,
-        "option_type": "CE",
-        "delta_threshold": 0.20,
-        "trigger_direction": ">",
-    },
-    {
-        "instrument": "NIFTY",
-        "expiry": "2026-07-28",
-        "strike": 25100,
-        "option_type": "CE",
-        "delta_threshold": 0.15,
-        "trigger_direction": ">",
-    },
-    {
-        "instrument": "NIFTY",
-        "expiry": "2026-07-28",
-        "strike": 24300,
-        "option_type": "PE",
-        "delta_threshold": -0.20,
-        "trigger_direction": "<",
-    },
-    {
-        "instrument": "NIFTY",
-        "expiry": "2026-07-28",
-        "strike": 24200,
-        "option_type": "PE",
-        "delta_threshold": -0.15,
-        "trigger_direction": "<",
-    },
-]
+def prompt_choice(prompt, choices):
+
+    while True:
+
+        value = input(prompt).strip().upper()
+
+        if value in choices:
+            return value
+
+        print(
+            "Enter one of: "
+            + ", ".join(choices)
+        )
+
+
+def prompt_expiry():
+
+    while True:
+
+        value = input(
+            "Expiry (YYYY-MM-DD) : "
+        ).strip()
+
+        try:
+            datetime.strptime(value, "%Y-%m-%d")
+            return value
+
+        except ValueError:
+            print("Enter expiry as YYYY-MM-DD.")
+
+
+def prompt_number(prompt):
+
+    while True:
+
+        try:
+            return float(input(prompt).strip())
+
+        except ValueError:
+            print("Enter a valid number.")
+
+
+def build_contract_summary(contracts):
+
+    table = Table(
+        title="Configured Contracts",
+        box=box.ROUNDED
+    )
+
+    table.add_column("Instrument", style="cyan")
+    table.add_column("Expiry")
+    table.add_column("Strike", justify="right")
+    table.add_column("Type", justify="center")
+    table.add_column("Condition", justify="center")
+    table.add_column("Threshold", justify="right")
+
+    for contract in contracts:
+
+        table.add_row(
+            contract["instrument"],
+            contract["expiry"],
+            f"{contract['strike']:g}",
+            contract["option_type"],
+            contract["trigger_direction"],
+            f"{contract['delta_threshold']:.4f}",
+        )
+
+    return table
+
+
+def configure_contracts():
+
+    contracts = []
+
+    while True:
+
+        print(f"\nContract {len(contracts) + 1}")
+        print("-" * 20)
+
+        contract = {
+            "instrument": prompt_choice(
+                "Instrument "
+                "(NIFTY/BANKNIFTY/FINNIFTY) : ",
+                ("NIFTY", "BANKNIFTY", "FINNIFTY")
+            ),
+            "expiry": prompt_expiry(),
+            "strike": prompt_number("Strike : "),
+            "option_type": prompt_choice(
+                "Option Type (CE/PE) : ",
+                ("CE", "PE")
+            ),
+            "trigger_direction": prompt_choice(
+                "Trigger Direction (>/<) : ",
+                (">", "<")
+            ),
+            "delta_threshold": prompt_number(
+                "Delta Threshold : "
+            ),
+        }
+
+        contracts.append(contract)
+
+        if prompt_choice(
+            "Add another contract? (Y/N) : ",
+            ("Y", "N")
+        ) == "N":
+            break
+
+    print()
+    Console().print(
+        build_contract_summary(contracts)
+    )
+    print()
+
+    if prompt_choice(
+        "Start Monitoring? (Y/N) : ",
+        ("Y", "N")
+    ) == "N":
+        print("Monitoring cancelled.")
+        raise SystemExit(0)
+
+    return contracts
 
 
 def threshold_reached(delta, threshold, direction):
@@ -125,9 +182,11 @@ def threshold_reached(delta, threshold, direction):
 
 print()
 print("=" * 55)
-print("              BK DELTA ENGINE v1.0")
+print("              BK DELTA ENGINE v1.2")
 print("=" * 55)
 print()
+
+MONITORED_CONTRACTS = configure_contracts()
 
 print()
 print("Searching contracts...")
@@ -191,7 +250,7 @@ for contract in MONITORED_CONTRACTS:
 def build_dashboard():
 
     table = Table(
-        title="BK DELTA ENGINE v1.0",
+        title="BK DELTA ENGINE v1.2",
         box=box.ROUNDED,
         expand=True
     )
