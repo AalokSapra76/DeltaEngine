@@ -120,15 +120,19 @@ class KiteClient:
                     f"Unsupported underlying: {symbol}"
                 )
 
-            self.option_tokens[option_token] = contract_index
+            self.option_tokens.setdefault(
+                option_token,
+                []
+            ).append(contract_index)
             self.contract_spot_tokens[contract_index] = (
                 self.SPOT_TOKENS[symbol]
             )
 
         return {
             contract_index: option_token
-            for option_token, contract_index
+            for option_token, contract_indexes
             in self.option_tokens.items()
+            for contract_index in contract_indexes
         }
 
     # -------------------------------------------------
@@ -159,8 +163,9 @@ class KiteClient:
                 token = tick["instrument_token"]
 
                 if token in self.option_tokens:
-                    contract_index = self.option_tokens[token]
-                    self.last_option_ticks[contract_index] = tick
+
+                    for contract_index in self.option_tokens[token]:
+                        self.last_option_ticks[contract_index] = tick
 
                 elif token in self.contract_spot_tokens.values():
                     self.last_spot_ticks[token] = tick
