@@ -35,6 +35,78 @@ DEFAULT_TRIGGER = config["delta_rule"]["default_trigger"]
 
 
 # ==================================================
+# MONITORED CONTRACTS
+# ==================================================
+
+MONITORED_CONTRACTS = [
+    {
+        "instrument": "NIFTY",
+        "expiry": "2026-07-14",
+        "strike": 24800,
+        "option_type": "CE",
+        "delta_threshold": 0.30,
+        "trigger_direction": ">",
+    },
+    {
+        "instrument": "NIFTY",
+        "expiry": "2026-07-14",
+        "strike": 24900,
+        "option_type": "CE",
+        "delta_threshold": 0.25,
+        "trigger_direction": ">",
+    },
+    {
+        "instrument": "NIFTY",
+        "expiry": "2026-07-14",
+        "strike": 24500,
+        "option_type": "PE",
+        "delta_threshold": -0.30,
+        "trigger_direction": "<",
+    },
+    {
+        "instrument": "NIFTY",
+        "expiry": "2026-07-14",
+        "strike": 24400,
+        "option_type": "PE",
+        "delta_threshold": -0.25,
+        "trigger_direction": "<",
+    },
+    {
+        "instrument": "NIFTY",
+        "expiry": "2026-07-28",
+        "strike": 25000,
+        "option_type": "CE",
+        "delta_threshold": 0.20,
+        "trigger_direction": ">",
+    },
+    {
+        "instrument": "NIFTY",
+        "expiry": "2026-07-28",
+        "strike": 25100,
+        "option_type": "CE",
+        "delta_threshold": 0.15,
+        "trigger_direction": ">",
+    },
+    {
+        "instrument": "NIFTY",
+        "expiry": "2026-07-28",
+        "strike": 24300,
+        "option_type": "PE",
+        "delta_threshold": -0.20,
+        "trigger_direction": "<",
+    },
+    {
+        "instrument": "NIFTY",
+        "expiry": "2026-07-28",
+        "strike": 24200,
+        "option_type": "PE",
+        "delta_threshold": -0.15,
+        "trigger_direction": "<",
+    },
+]
+
+
+# ==================================================
 # STARTUP
 # ==================================================
 
