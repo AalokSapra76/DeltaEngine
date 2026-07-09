@@ -163,13 +163,27 @@ def configure_contracts():
     return contracts
 
 
-def threshold_reached(delta, threshold, direction):
+def threshold_crossed(
+    previous_delta,
+    current_delta,
+    threshold,
+    direction
+):
+
+    if previous_delta is None:
+        return False
 
     if direction == ">":
-        return delta > threshold
+        return (
+            previous_delta <= threshold
+            and current_delta > threshold
+        )
 
     if direction == "<":
-        return delta < threshold
+        return (
+            previous_delta >= threshold
+            and current_delta < threshold
+        )
 
     raise ValueError(
         f"Unsupported trigger direction: {direction}"
@@ -238,6 +252,7 @@ for contract in MONITORED_CONTRACTS:
         "spot": 0.0,
         "premium": 0.0,
         "delta": 0.0,
+        "previous_delta": None,
         "triggered": False,
         "status": "Monitoring",
     })
@@ -317,14 +332,19 @@ def tick_handler(contract_index, option_tick, spot_tick):
         RISK_FREE_RATE
     )
 
-    if (
+    crossed = (
         not contract["triggered"]
-        and threshold_reached(
+        and threshold_crossed(
+            contract["previous_delta"],
             contract["delta"],
             contract["delta_threshold"],
             contract["trigger_direction"]
         )
-    ):
+    )
+
+    contract["previous_delta"] = contract["delta"]
+
+    if crossed:
 
         contract["triggered"] = True
 
