@@ -15,7 +15,7 @@ from rich import box
 from auth import AuthManager
 from kite_client import KiteClient
 from greeks import Greeks
-from contract_source import get_contracts
+from contract_source.console import get_console_contracts
 from webhook import Webhook
 
 
@@ -79,7 +79,7 @@ print("              BK DELTA ENGINE v1.2")
 print("=" * 55)
 print()
 
-MONITORED_CONTRACTS = get_contracts()
+MONITORED_CONTRACTS = get_console_contracts()
 
 print()
 print("Searching contracts...")

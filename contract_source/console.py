@@ -4,11 +4,15 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 
+from contract_store import (
+    add_contract,
+    clear_contracts,
+    get_contracts,
+)
+
 
 def prompt_choice(prompt, choices):
-
     while True:
-
         value = input(prompt).strip().upper()
 
         if value in choices:
@@ -21,7 +25,6 @@ def prompt_choice(prompt, choices):
 
 
 def prompt_expiry():
-
     while True:
 
         value = input(
@@ -29,6 +32,7 @@ def prompt_expiry():
         ).strip()
 
         try:
+
             datetime.strptime(
                 value,
                 "%Y-%m-%d"
@@ -44,7 +48,6 @@ def prompt_expiry():
 
 
 def prompt_number(prompt):
-
     while True:
 
         try:
@@ -60,7 +63,7 @@ def prompt_number(prompt):
             )
 
 
-def build_contract_summary(contracts):
+def build_contract_summary():
 
     table = Table(
         title="Configured Contracts",
@@ -73,7 +76,6 @@ def build_contract_summary(contracts):
     )
 
     table.add_column("Expiry")
-
     table.add_column(
         "Strike",
         justify="right"
@@ -94,7 +96,7 @@ def build_contract_summary(contracts):
         justify="right"
     )
 
-    for contract in contracts:
+    for contract in get_contracts():
 
         table.add_row(
             contract["instrument"],
@@ -110,14 +112,14 @@ def build_contract_summary(contracts):
 
 def configure_contracts():
 
-    contracts = []
+    clear_contracts()
 
     while True:
 
         print()
 
         print(
-            f"Contract {len(contracts) + 1}"
+            f"Contract {len(get_contracts()) + 1}"
         )
 
         print("-" * 20)
@@ -125,15 +127,12 @@ def configure_contracts():
         contract = {
 
             "instrument": prompt_choice(
-
                 "Instrument (NIFTY/BANKNIFTY/FINNIFTY) : ",
-
                 (
                     "NIFTY",
                     "BANKNIFTY",
                     "FINNIFTY"
                 )
-
             ),
 
             "expiry": prompt_expiry(),
@@ -143,36 +142,30 @@ def configure_contracts():
             ),
 
             "option_type": prompt_choice(
-
                 "Option Type (CE/PE) : ",
-
                 (
                     "CE",
                     "PE"
                 )
-
             ),
 
             "trigger_direction": prompt_choice(
-
                 "Trigger Direction (>/<) : ",
-
                 (
                     ">",
                     "<"
                 )
-
             ),
 
             "delta_threshold": prompt_number(
-
                 "Delta Threshold : "
-
             ),
+
+            "id": None
 
         }
 
-        contracts.append(contract)
+        add_contract(contract)
 
         if prompt_choice(
 
@@ -190,11 +183,7 @@ def configure_contracts():
     print()
 
     Console().print(
-
-        build_contract_summary(
-            contracts
-        )
-
+        build_contract_summary()
     )
 
     print()
@@ -216,9 +205,8 @@ def configure_contracts():
 
         raise SystemExit(0)
 
-    return contracts
+    return get_contracts()
 
 
-def get_contracts():
-
+def get_console_contracts():
     return configure_contracts()
