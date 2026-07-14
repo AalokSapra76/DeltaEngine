@@ -250,38 +250,43 @@ def tick_handler(contract_index, option_tick, spot_tick):
 # START ENGINE
 # ==================================================
 
-print()
-print("Connecting to Kite...")
-print()
+def start_engine():
 
-with Live(
-    build_dashboard(),
-    refresh_per_second=4,
-    screen=True,
-    auto_refresh=True,
-) as live:
+    print()
+    print("Connecting to Kite...")
+    print()
 
-    def live_tick_handler(
-        contract_index,
-        option_tick,
-        spot_tick
-    ):
+    with Live(
+        build_dashboard(),
+        refresh_per_second=4,
+        screen=True,
+        auto_refresh=True,
+    ) as live:
 
-        tick_handler(
+        def live_tick_handler(
             contract_index,
             option_tick,
             spot_tick
+        ):
+
+            tick_handler(
+                contract_index,
+                option_tick,
+                spot_tick
+            )
+
+            live.update(
+                build_dashboard(),
+                refresh=True
+            )
+
+        client.connect_multiple(
+            live_tick_handler
         )
 
-        live.update(
-            build_dashboard(),
-            refresh=True
-        )
+    print()
+    print("Engine Stopped.")
+    print()
 
-    client.connect_multiple(
-        live_tick_handler
-    )
-
-print()
-print("Engine Stopped.")
-print()
+if __name__ == '__main__':
+    start_engine()
