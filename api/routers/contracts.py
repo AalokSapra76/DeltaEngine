@@ -9,7 +9,6 @@ from contract_store import (
     remove_contract,
 )
 
-
 router = APIRouter(tags=["Contracts"])
 
 
@@ -17,13 +16,15 @@ class Contract(BaseModel):
     instrument: str
     expiry: str
     strike: float
-    option_type: str
-    trigger_direction: str
-    delta_threshold: float
+    optionType: str
+    condition: str
+    threshold: float
+    webhookProfileId: str
 
 
 @router.get("/contracts")
 def list_contracts():
+
     return get_contracts()
 
 
@@ -39,6 +40,29 @@ def create_contract(contract: Contract):
     return new_contract
 
 
+@router.put("/contracts/{contract_id}")
+def update_contract(contract_id: str, contract: Contract):
+
+    contracts = get_contracts()
+
+    for i, c in enumerate(contracts):
+
+        if c["id"] == contract_id:
+
+            updated = contract.model_dump()
+
+            updated["id"] = contract_id
+
+            contracts[i] = updated
+
+            return updated
+
+    raise HTTPException(
+        status_code=404,
+        detail="Contract not found",
+    )
+
+
 @router.delete("/contracts/{contract_id}")
 def delete_contract(contract_id: str):
 
@@ -50,5 +74,5 @@ def delete_contract(contract_id: str):
 
     raise HTTPException(
         status_code=404,
-        detail="Contract not found"
+        detail="Contract not found",
     )
