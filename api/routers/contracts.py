@@ -3,16 +3,19 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from contract_model import Contract
 from contract_store import (
     add_contract,
+    get_contract,
     get_contracts,
     remove_contract,
+    update_contract,
 )
 
 router = APIRouter(tags=["Contracts"])
 
 
-class Contract(BaseModel):
+class ContractRequest(BaseModel):
     instrument: str
     expiry: str
     strike: float
@@ -24,55 +27,54 @@ class Contract(BaseModel):
 
 @router.get("/contracts")
 def list_contracts():
-
-    return get_contracts()
+    return [c.to_dict() for c in get_contracts()]
 
 
 @router.post("/contracts")
-def create_contract(contract: Contract):
+def create_contract(req: ContractRequest):
 
-    new_contract = contract.model_dump()
+    contract = Contract(
+        id=str(uuid4()),
+        instrument=req.instrument,
+        expiry=req.expiry,
+        strike=req.strike,
+        option_type=req.optionType,
+        trigger_direction=req.condition,
+        delta_threshold=req.threshold,
+        webhook_profile_id=req.webhookProfileId,
+    )
 
-    new_contract["id"] = str(uuid4())
+    add_contract(contract)
 
-    add_contract(new_contract)
-
-    return new_contract
+    return contract.to_dict()
 
 
 @router.put("/contracts/{contract_id}")
-def update_contract(contract_id: str, contract: Contract):
+def edit_contract(contract_id: str, req: ContractRequest):
 
-    contracts = get_contracts()
+    if get_contract(contract_id) is None:
+        raise HTTPException(404, "Contract not found")
 
-    for i, c in enumerate(contracts):
-
-        if c["id"] == contract_id:
-
-            updated = contract.model_dump()
-
-            updated["id"] = contract_id
-
-            contracts[i] = updated
-
-            return updated
-
-    raise HTTPException(
-        status_code=404,
-        detail="Contract not found",
+    contract = Contract(
+        id=contract_id,
+        instrument=req.instrument,
+        expiry=req.expiry,
+        strike=req.strike,
+        option_type=req.optionType,
+        trigger_direction=req.condition,
+        delta_threshold=req.threshold,
+        webhook_profile_id=req.webhookProfileId,
     )
+
+    update_contract(contract)
+
+    return contract.to_dict()
 
 
 @router.delete("/contracts/{contract_id}")
 def delete_contract(contract_id: str):
 
     if remove_contract(contract_id):
+        return {"status": "deleted"}
 
-        return {
-            "status": "deleted"
-        }
-
-    raise HTTPException(
-        status_code=404,
-        detail="Contract not found",
-    )
+    raise HTTPException(404, "Contract not found")

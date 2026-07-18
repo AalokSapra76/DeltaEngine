@@ -14,19 +14,19 @@ def get_dashboard():
 
         dashboard.append(
             {
-                "id": c["id"],
-                "instrument": c["instrument"],
-                "expiry": c["expiry"],
-                "strike": c["strike"],
-                "optionType": c["optionType"],
-                "condition": c["condition"],
-                "threshold": c["threshold"],
-                "webhookProfileId": c["webhookProfileId"],
-                "spot": None,
-                "premium": None,
-                "currentDelta": None,
-                "status": "idle",
-                "triggered": False,
+                "id": c.id,
+                "instrument": c.instrument,
+                "expiry": c.expiry,
+                "strike": c.strike,
+                "optionType": c.option_type,
+                "condition": c.trigger_direction,
+                "threshold": c.delta_threshold,
+                "webhookProfileId": c.webhook_profile_id,
+                "spot": c.spot,
+                "premium": c.premium,
+                "currentDelta": c.delta,
+                "status": c.status.lower(),
+                "triggered": c.triggered,
                 "lastUpdated": None,
             }
         )

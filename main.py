@@ -73,220 +73,219 @@ def threshold_crossed(
 # STARTUP
 # ==================================================
 
-print()
-print("=" * 55)
-print("              BK DELTA ENGINE v1.2")
-print("=" * 55)
-print()
-
-MONITORED_CONTRACTS = get_console_contracts()
-
-print()
-print("Searching contracts...")
-print()
-
-
-# ==================================================
-# LOGIN
-# ==================================================
-
-auth = AuthManager(
-    API_KEY,
-    API_SECRET
-)
-
-access_token = auth.get_access_token()
-
-
-# ==================================================
-# CLIENT
-# ==================================================
-
-client = KiteClient(
-    API_KEY,
-    access_token
-)
-
-client.find_option_tokens(
-    MONITORED_CONTRACTS
-)
-
-webhook = Webhook(
-    WEBHOOK_URL
-)
-
-
-# ==================================================
-# CONTRACT STATE
-# ==================================================
-
-IV = 12.2
-
-contract_states = []
-
-for contract in MONITORED_CONTRACTS:
-
-    contract_states.append({
-        **contract,
-        "spot": 0.0,
-        "premium": 0.0,
-        "delta": 0.0,
-        "previous_delta": None,
-        "triggered": False,
-        "status": "Monitoring",
-    })
-
-
-# ==================================================
-# DASHBOARD
-# ==================================================
-
-def build_dashboard():
-
-    table = Table(
-        title="BK DELTA ENGINE v1.2",
-        box=box.ROUNDED,
-        expand=True
+def start_engine(monitored_contracts=None):
+    print()
+    print("=" * 55)
+    print("              BK DELTA ENGINE v1.2")
+    print("=" * 55)
+    print()
+    
+    if monitored_contracts is None:
+        MONITORED_CONTRACTS = get_console_contracts()
+    else:
+        MONITORED_CONTRACTS = monitored_contracts
+    
+    print()
+    print("Searching contracts...")
+    print()
+    
+    
+    # ==================================================
+    # LOGIN
+    # ==================================================
+    
+    auth = AuthManager(
+        API_KEY,
+        API_SECRET
     )
-
-    table.add_column("Instrument", style="cyan")
-    table.add_column("Expiry")
-    table.add_column("Strike", justify="right")
-    table.add_column("Type", justify="center")
-    table.add_column("Spot", justify="right")
-    table.add_column("Premium", justify="right")
-    table.add_column("Delta", justify="right")
-    table.add_column("Threshold", justify="right")
-    table.add_column("Condition", justify="center")
-    table.add_column("Status")
-    table.add_column("Triggered", justify="center")
-
-    for contract in contract_states:
-
-        table.add_row(
-            contract["instrument"],
-            contract["expiry"],
-            f"{int(contract['strike'])}",
-            contract["option_type"],
-            f"{contract['spot']:.2f}",
-            f"{contract['premium']:.2f}",
-            f"{contract['delta']:.4f}",
-            f"{contract['delta_threshold']:.4f}",
-            contract["trigger_direction"],
-            contract["status"],
-            "Yes" if contract["triggered"] else "No",
+    
+    access_token = auth.get_access_token()
+    
+    
+    # ==================================================
+    # CLIENT
+    # ==================================================
+    
+    client = KiteClient(
+        API_KEY,
+        access_token
+    )
+    
+    client.find_option_tokens(
+        MONITORED_CONTRACTS
+    )
+    
+    webhook = Webhook(
+        WEBHOOK_URL
+    )
+    
+    
+    # ==================================================
+    # CONTRACT STATE
+    # ==================================================
+    
+    IV = 12.2
+    
+    contract_states = []
+    
+    for contract in MONITORED_CONTRACTS:
+    
+        contract_states.append({
+            **contract,
+            "spot": 0.0,
+            "premium": 0.0,
+            "delta": 0.0,
+            "previous_delta": None,
+            "triggered": False,
+            "status": "Monitoring",
+        })
+    
+    
+    # ==================================================
+    # DASHBOARD
+    # ==================================================
+    
+    def build_dashboard():
+    
+        table = Table(
+            title="BK DELTA ENGINE v1.2",
+            box=box.ROUNDED,
+            expand=True
         )
-
-    return table
-
-
-# ==================================================
-# TICK CALLBACK
-# ==================================================
-
-def tick_handler(contract_index, option_tick, spot_tick):
-
-    contract = contract_states[contract_index]
-
-    contract["premium"] = option_tick["last_price"]
-
-    contract["spot"] = spot_tick["last_price"]
-
-    expiry_date = datetime.strptime(
-        contract["expiry"],
-        "%Y-%m-%d"
-    )
-
-    days = max(
-        (expiry_date - datetime.now()).days,
-        1
-    )
-
-    contract["delta"] = Greeks.delta(
-        contract["spot"],
-        contract["strike"],
-        IV,
-        days,
-        contract["option_type"],
-        RISK_FREE_RATE
-    )
-
-    crossed = (
-        not contract["triggered"]
-        and threshold_crossed(
-            contract["previous_delta"],
-            contract["delta"],
-            contract["delta_threshold"],
-            contract["trigger_direction"]
-        )
-    )
-
-    contract["previous_delta"] = contract["delta"]
-
-    if crossed:
-
-        contract["triggered"] = True
-
-        contract["status"] = "TRIGGERED"
-
-        try:
-
-            webhook.send(
+    
+        table.add_column("Instrument", style="cyan")
+        table.add_column("Expiry")
+        table.add_column("Strike", justify="right")
+        table.add_column("Type", justify="center")
+        table.add_column("Spot", justify="right")
+        table.add_column("Premium", justify="right")
+        table.add_column("Delta", justify="right")
+        table.add_column("Threshold", justify="right")
+        table.add_column("Condition", justify="center")
+        table.add_column("Status")
+        table.add_column("Triggered", justify="center")
+    
+        for contract in contract_states:
+    
+            table.add_row(
                 contract["instrument"],
                 contract["expiry"],
-                contract["strike"],
+                f"{int(contract['strike'])}",
                 contract["option_type"],
-                contract["delta"],
-                contract["premium"],
-                contract["spot"]
+                f"{contract['spot']:.2f}",
+                f"{contract['premium']:.2f}",
+                f"{contract['delta']:.4f}",
+                f"{contract['delta_threshold']:.4f}",
+                contract["trigger_direction"],
+                contract["status"],
+                "Yes" if contract["triggered"] else "No",
             )
-
-        except Exception as e:
-
-            contract["status"] = f"WEBHOOK FAILED: {e}"
-
-
-# ==================================================
-# START ENGINE
-# ==================================================
-
-def start_engine():
-
+    
+        return table
+    
+    
+    # ==================================================
+    # TICK CALLBACK
+    # ==================================================
+    
+    def tick_handler(contract_index, option_tick, spot_tick):
+    
+        contract = contract_states[contract_index]
+    
+        contract["premium"] = option_tick["last_price"]
+    
+        contract["spot"] = spot_tick["last_price"]
+    
+        expiry_date = datetime.strptime(
+            contract["expiry"],
+            "%Y-%m-%d"
+        )
+    
+        days = max(
+            (expiry_date - datetime.now()).days,
+            1
+        )
+    
+        contract["delta"] = Greeks.delta(
+            contract["spot"],
+            contract["strike"],
+            IV,
+            days,
+            contract["option_type"],
+            RISK_FREE_RATE
+        )
+    
+        crossed = (
+            not contract["triggered"]
+            and threshold_crossed(
+                contract["previous_delta"],
+                contract["delta"],
+                contract["delta_threshold"],
+                contract["trigger_direction"]
+            )
+        )
+    
+        contract["previous_delta"] = contract["delta"]
+    
+        if crossed:
+    
+            contract["triggered"] = True
+    
+            contract["status"] = "TRIGGERED"
+    
+            try:
+    
+                webhook.send(
+                    contract["instrument"],
+                    contract["expiry"],
+                    contract["strike"],
+                    contract["option_type"],
+                    contract["delta"],
+                    contract["premium"],
+                    contract["spot"]
+                )
+    
+            except Exception as e:
+    
+                contract["status"] = f"WEBHOOK FAILED: {e}"
+    
+    
     print()
     print("Connecting to Kite...")
     print()
-
+    
     with Live(
         build_dashboard(),
         refresh_per_second=4,
         screen=True,
         auto_refresh=True,
     ) as live:
-
+    
         def live_tick_handler(
             contract_index,
             option_tick,
             spot_tick
         ):
-
+    
             tick_handler(
                 contract_index,
                 option_tick,
                 spot_tick
             )
-
+    
             live.update(
                 build_dashboard(),
                 refresh=True
             )
-
+    
         client.connect_multiple(
             live_tick_handler
         )
-
+    
     print()
     print("Engine Stopped.")
     print()
+
 
 if __name__ == '__main__':
     start_engine()
