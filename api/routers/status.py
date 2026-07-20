@@ -1,33 +1,25 @@
+"""
+Status router.
+
+Delegates to the engine controller — never returns hardcoded values.
+The frontend `EngineStatus` type consumes {state, connected, broker}.
+"""
+
 from fastapi import APIRouter
 
-router = APIRouter(
-    tags=["Status"]
-)
+from engine_control import controller
+
+router = APIRouter(tags=["Status"])
 
 
 @router.get("/")
 def root():
     return {
         "application": "BK Delta Terminal",
-        "engine": "Delta Engine",
-        "status": "online",
-        "version": "2.0"
+        "version": "2.0",
     }
 
 
 @router.get("/status")
 def status():
-
-    return {
-
-        "running": False,
-
-        "kite": "disconnected",
-
-        "contracts": 0,
-
-        "market": "closed",
-
-        "version": "2.0"
-
-    }
+    return controller.status()
