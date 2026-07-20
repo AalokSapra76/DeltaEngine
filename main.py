@@ -17,6 +17,8 @@ from kite_client import KiteClient
 from greeks import Greeks
 from contract_source.console import get_console_contracts
 from webhook import Webhook
+from engine_control.instrument_cache import set_instruments
+from engine_control.snapshot import publish_snapshot
 
 
 # ==================================================
@@ -257,7 +259,7 @@ def start_engine(monitored_contracts=None):
     with Live(
         build_dashboard(),
         refresh_per_second=4,
-        screen=True,
+        screen=False,
         auto_refresh=True,
     ) as live:
     
@@ -273,6 +275,8 @@ def start_engine(monitored_contracts=None):
                 spot_tick
             )
     
+            publish_snapshot(contract_states)
+
             live.update(
                 build_dashboard(),
                 refresh=True

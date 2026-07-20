@@ -5,7 +5,7 @@ router = APIRouter(tags=["Instruments"])
 
 INSTRUMENTS = {
     "NIFTY": {
-        "2026-07-14": [
+        "2026-07-21": [
             24000,
             24050,
             24100,

@@ -145,9 +145,16 @@ class KiteClient:
             set(self.contract_spot_tokens.values())
         )
 
+        print("\n====================================")
+        print("Subscribing to tokens:")
+        print(subscribed_tokens)
+        print("====================================\n")
+
         def on_connect(ws, response):
 
-            print("Connected.")
+            print("========== WEBSOCKET CONNECTED ==========")
+            print("Response:", response)
+            print("Subscribing:", subscribed_tokens)
 
             ws.subscribe(subscribed_tokens)
 
@@ -190,9 +197,24 @@ class KiteClient:
 
             print("Socket Closed:", reason)
 
+        def on_error(ws, code, reason):
+            print("========== WEBSOCKET ERROR ==========")
+            print(code)
+            print(reason)
+
+        def on_reconnect(ws, attempts):
+            print("========== RECONNECT ==========")
+            print("Attempt:", attempts)
+
+        def on_noreconnect(ws):
+            print("========== NO RECONNECT ==========")
+
         self.kws.on_connect = on_connect
         self.kws.on_ticks = on_ticks
         self.kws.on_close = on_close
+        self.kws.on_error = on_error
+        self.kws.on_reconnect = on_reconnect
+        self.kws.on_noreconnect = on_noreconnect
 
         self.kws.connect(threaded=False)
 
@@ -202,7 +224,9 @@ class KiteClient:
 
         def on_connect(ws, response):
 
-            print("Connected.")
+            print("========== WEBSOCKET CONNECTED ==========")
+            print("Response:", response)
+            print("Subscribing:", subscribed_tokens)
 
             ws.subscribe([
                 self.option_token,
@@ -243,8 +267,23 @@ class KiteClient:
 
             print("Socket Closed:", reason)
 
+        def on_error(ws, code, reason):
+            print("========== WEBSOCKET ERROR ==========")
+            print(code)
+            print(reason)
+
+        def on_reconnect(ws, attempts):
+            print("========== RECONNECT ==========")
+            print("Attempt:", attempts)
+
+        def on_noreconnect(ws):
+            print("========== NO RECONNECT ==========")
+
         self.kws.on_connect = on_connect
         self.kws.on_ticks = on_ticks
         self.kws.on_close = on_close
+        self.kws.on_error = on_error
+        self.kws.on_reconnect = on_reconnect
+        self.kws.on_noreconnect = on_noreconnect
 
         self.kws.connect(threaded=False)
