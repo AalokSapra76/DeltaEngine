@@ -31,6 +31,7 @@ class EngineController:
             return
 
         engine_contracts = get_contracts()
+        print("ENGINE CONTRACTS:", engine_contracts)
 
         self._thread = Thread(
             target=lambda: main.start_engine(engine_contracts),

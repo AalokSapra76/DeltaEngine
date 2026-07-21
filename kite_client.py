@@ -8,6 +8,7 @@ Handles:
 
 import datetime
 from kiteconnect import KiteConnect, KiteTicker
+from engine_control.instrument_cache import get_instruments, set_instruments
 
 
 class KiteClient:
@@ -43,7 +44,20 @@ class KiteClient:
 
     def download_instruments(self):
 
-        return self.kite.instruments("NFO")
+        instruments = get_instruments()
+
+        if instruments:
+            return instruments
+
+        print("Downloading NFO Instrument Master...")
+
+        instruments = self.kite.instruments("NFO")
+
+        set_instruments(instruments)
+
+        print(f"Cached {len(instruments)} instruments.")
+
+        return instruments
 
     # -------------------------------------------------
 
@@ -127,6 +141,9 @@ class KiteClient:
             self.contract_spot_tokens[contract_index] = (
                 self.SPOT_TOKENS[symbol]
             )
+
+        print("OPTION TOKENS:", self.option_tokens)
+        print("SPOT TOKENS:", self.contract_spot_tokens)
 
         return {
             contract_index: option_token

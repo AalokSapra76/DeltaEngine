@@ -112,7 +112,7 @@ def start_engine(monitored_contracts=None):
         API_KEY,
         access_token
     )
-    
+    print("MONITORED_CONTRACTS =", MONITORED_CONTRACTS)
     client.find_option_tokens(
         MONITORED_CONTRACTS
     )

@@ -1,73 +1,56 @@
 from fastapi import APIRouter, HTTPException
 
+from engine_control.instrument_cache import get_instruments as get_cached_instruments
+
 router = APIRouter(tags=["Instruments"])
-
-
-INSTRUMENTS = {
-    "NIFTY": {
-        "2026-07-21": [
-            24000,
-            24050,
-            24100,
-            24150,
-            24200,
-            24250,
-            24300,
-            24350,
-            24400,
-            24450,
-            24500,
-        ]
-    },
-    "BANKNIFTY": {
-        "2026-07-16": [
-            56000,
-            56100,
-            56200,
-            56300,
-            56400,
-            56500,
-        ]
-    },
-    "FINNIFTY": {
-        "2026-07-14": [
-            27000,
-            27050,
-            27100,
-            27150,
-            27200,
-        ]
-    },
-}
 
 
 @router.get("/instruments")
 def get_instruments():
-    return list(INSTRUMENTS.keys())
+    instruments = get_cached_instruments()
+    if not instruments:
+        raise HTTPException(503, "Instrument cache not initialized. Start the engine first.")
+
+    symbols = sorted({i["name"] for i in instruments if i.get("segment") == "NFO-OPT"})
+    return symbols
 
 
 @router.get("/instruments/{instrument}/expiries")
 def get_expiries(instrument: str):
+    instruments = get_cached_instruments()
+    if not instruments:
+        raise HTTPException(503, "Instrument cache not initialized. Start the engine first.")
 
     instrument = instrument.upper()
+    expiries = sorted({
+        str(i["expiry"])
+        for i in instruments
+        if i.get("segment") == "NFO-OPT" and i.get("name") == instrument
+    })
 
-    if instrument not in INSTRUMENTS:
+    if not expiries:
         raise HTTPException(404, "Instrument not found")
 
-    return list(INSTRUMENTS[instrument].keys())
+    return expiries
 
 
 @router.get("/instruments/{instrument}/expiries/{expiry}/strikes")
 def get_strikes(instrument: str, expiry: str):
+    instruments = get_cached_instruments()
+    if not instruments:
+        raise HTTPException(503, "Instrument cache not initialized. Start the engine first.")
 
     instrument = instrument.upper()
 
-    if instrument not in INSTRUMENTS:
-        raise HTTPException(404, "Instrument not found")
+    strikes = sorted({
+        int(i["strike"])
+        for i in instruments
+        if i.get("segment") == "NFO-OPT"
+        and i.get("name") == instrument
+        and str(i.get("expiry")) == expiry
+    })
 
-    expiries = INSTRUMENTS[instrument]
-
-    if expiry not in expiries:
+    if not strikes:
         raise HTTPException(404, "Expiry not found")
 
-    return expiries[expiry]
+    return strikes
