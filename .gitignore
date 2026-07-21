@@ -5,3 +5,4 @@ __pycache__/
 token.json
 webhook_debug.log
 *.zip
+profiles.json

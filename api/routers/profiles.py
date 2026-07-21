@@ -1,4 +1,6 @@
 from uuid import uuid4
+import json
+import requests
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -65,10 +67,38 @@ def test_profile(profile_id: str):
 
     for profile in get_profiles():
 
-        if profile["id"] == profile_id:
+        if profile["id"] != profile_id:
+            continue
+
+        try:
+            headers = profile.get("headers") or {}
+            payload = profile.get("payload") or "{}"
+
+            if isinstance(payload, str):
+                try:
+                    payload = json.loads(payload)
+                except Exception:
+                    payload = {"payload": payload}
+
+            method = profile.get("method", "POST").upper()
+
+            if method == "POST":
+                response = requests.post(profile["url"], json=payload, headers=headers, timeout=5)
+            elif method == "PUT":
+                response = requests.put(profile["url"], json=payload, headers=headers, timeout=5)
+            elif method == "GET":
+                response = requests.get(profile["url"], headers=headers, timeout=5)
+            else:
+                raise HTTPException(400, f"Unsupported HTTP method: {method}")
+
             return {
-                "ok": True,
-                "message": f"Test successful for '{profile['name']}'"
+                "ok": 200 <= response.status_code < 300,
+                "status": response.status_code,
+                "reason": response.reason,
+                "response": response.text,
             }
+
+        except requests.RequestException as e:
+            raise HTTPException(500, str(e))
 
     raise HTTPException(404, "Profile not found")
