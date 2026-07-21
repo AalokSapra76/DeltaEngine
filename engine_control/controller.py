@@ -12,6 +12,7 @@ from threading import Thread
 import main
 from contract_store import get_contracts
 from engine_control.snapshot import clear_snapshot
+from engine_control.bootstrap import disconnect_client
 
 
 class EngineState(str, Enum):
@@ -44,12 +45,17 @@ class EngineController:
         self._state = EngineState.PAUSED
 
     def stop(self):
+        disconnect_client()
+
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=2)
+
+        self._thread = None
         self._state = EngineState.STOPPED
         clear_snapshot()
 
     def reset(self):
-        self._state = EngineState.STOPPED
-        clear_snapshot()
+        self.stop()
 
     def status(self):
         return {

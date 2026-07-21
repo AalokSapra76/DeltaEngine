@@ -9,16 +9,13 @@ from datetime import datetime
 
 from rich.live import Live
 from rich.table import Table
-from rich.console import Console
 from rich import box
 
-from auth import AuthManager
-from kite_client import KiteClient
 from greeks import Greeks
 from contract_source.console import get_console_contracts
 from webhook import Webhook
-from engine_control.instrument_cache import set_instruments
 from engine_control.snapshot import publish_snapshot
+from engine_control.bootstrap import get_client
 
 
 # ==================================================
@@ -27,9 +24,6 @@ from engine_control.snapshot import publish_snapshot
 
 with open("config.json") as f:
     config = json.load(f)
-
-API_KEY = config["kite"]["api_key"]
-API_SECRET = config["kite"]["api_secret"]
 
 RISK_FREE_RATE = config["market"]["risk_free_rate"]
 
@@ -93,25 +87,15 @@ def start_engine(monitored_contracts=None):
     
     
     # ==================================================
-    # LOGIN
-    # ==================================================
-    
-    auth = AuthManager(
-        API_KEY,
-        API_SECRET
-    )
-    
-    access_token = auth.get_access_token()
-    
-    
-    # ==================================================
     # CLIENT
     # ==================================================
-    
-    client = KiteClient(
-        API_KEY,
-        access_token
-    )
+
+    client = get_client()
+
+    if client is None:
+        raise RuntimeError(
+            "Kite client not initialized. Bootstrap failed."
+        )
     print("MONITORED_CONTRACTS =", MONITORED_CONTRACTS)
     client.find_option_tokens(
         MONITORED_CONTRACTS

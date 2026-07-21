@@ -235,6 +235,22 @@ class KiteClient:
 
         self.kws.connect(threaded=False)
 
+
+    # -------------------------------------------------
+
+    def disconnect(self):
+
+        try:
+            print("Disconnecting Kite websocket...")
+            self.kws.stop()
+        except Exception as e:
+            print("Websocket stop ignored:", e)
+
+        self.last_option_tick = None
+        self.last_spot_tick = None
+        self.last_option_ticks = {}
+        self.last_spot_ticks = {}
+
     # -------------------------------------------------
 
     def connect(self, on_tick_callback):
@@ -259,7 +275,7 @@ class KiteClient:
             )
 
         def on_ticks(ws, ticks):
-
+            print("Ticks received:", len(ticks))
             for tick in ticks:
 
                 token = tick["instrument_token"]

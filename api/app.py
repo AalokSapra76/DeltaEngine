@@ -6,6 +6,7 @@ from api.routers.instruments import router as instruments_router
 from api.routers.dashboard import router as dashboard_router
 from api.routers.profiles import router as profiles_router
 from api.routers.control import router as control_router
+from engine_control.bootstrap import bootstrap_kite
 
 app = FastAPI(
 
@@ -30,6 +31,12 @@ app.add_middleware(
     allow_headers=["*"],
 
 )
+
+
+@app.on_event("startup")
+def startup():
+
+    bootstrap_kite()
 
 app.include_router(status_router, prefix="/api/v1")
 app.include_router(contracts_router, prefix="/api/v1")
